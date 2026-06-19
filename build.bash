@@ -19,6 +19,12 @@ fi
 package_split=(${package//\// })
 package_name=${package_split[-1]}
 
+# Build and embed the Prometheus Mantine web UI before compiling. The script is
+# idempotent (skips if assets already exist), so the second invocation of
+# build.bash in `make release` reuses the assets built by the first. Set FORCE=1
+# to force a rebuild.
+"$(dirname "$0")/scripts/build_ui_assets.sh"
+
 platforms=("linux/amd64" "linux/386" "darwin/amd64" "darwin/arm64" "linux/arm" "linux/arm64" "linux/loong64")
 
 for platform in "${platforms[@]}"
@@ -32,7 +38,7 @@ do
     fi  
 
     env GOOS=$GOOS GOARCH=$GOARCH CGO_ENABLED=0 GO111MODULE=on \
-        go build -mod=vendor -tags netgo,builtinassets -x \
+        go build -mod=vendor -tags netgo,builtinassets,embedassets -x \
                 -ldflags="${ldflags_array[*]}" \
                 -o $destination/$output_name $package
     if [ $? -ne 0 ]; then
